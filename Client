@@ -1,0 +1,137 @@
+#include "inet.h"
+#include <fcntl.h>
+#define BUFSIZE 1024
+
+void sendFile()
+{
+	printf("Send file option is chosen\n");
+}
+
+void createFolder()
+{
+	printf("Create folder option is chosen\n");
+}
+
+void deleteFolder()
+{
+	printf("Delete folder option is chosen\n");
+}
+
+void downloadFile()
+{
+	printf("Download file option is chosen\n");
+}
+
+main(int argc, char *argv[])
+{
+	int sockfd;
+	char buffer[BUFSIZE+1];
+	struct sockaddr_in serv_addr;
+	FILE *fp;
+	char *filename;
+
+	if(argc <= 1)
+	{
+		printf("How to use : %s remoteIPaddress [example: ./client 127.0.0.1]\n", argv[0]); 
+		exit(1);
+	}
+
+	bzero( (char*) &serv_addr, sizeof(serv_addr) );
+	serv_addr.sin_family = AF_INET ;
+	serv_addr.sin_port = htons (SERV_TCP_PORT);
+	inet_pton (AF_INET, argv[1], &serv_addr.sin_addr);
+
+	if( (sockfd = socket(AF_INET, SOCK_STREAM, 0) ) < 0) 
+	{
+		perror("Client: socket() error \n");
+		exit(1);
+	}
+
+	if(connect (sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) <0 ) 
+	{
+		perror("Client: connect() error\n");
+		exit(1);
+	}
+
+	/* Option */
+	printf("\nPlease select an option:\n");
+	printf("1. Send file to server\n");
+	printf("2. Create folder in server\n");
+	printf("3. Delete folder from server\n");
+	printf("4. Download file from server\n");
+	printf("5. Exit\n");
+	printf("Selection: ");
+	gets(buffer);
+	
+	if (!strcmp(buffer, "1"))
+	{
+		send(sockfd, buffer, BUFSIZE, 0); //send selection 
+		bzero( buffer, sizeof(buffer));
+
+		printf("Please enter a filename you want to send [Please include file type]: ");
+		gets(buffer);
+		fp = fopen(buffer, "r");
+		send(sockfd, buffer, BUFSIZE, 0); //send filename to server
+		bzero( buffer, sizeof(buffer));
+
+		int a = fread(buffer, 1, 256, fp);
+		send(sockfd, buffer, a, 0);	//send file data
+		bzero(buffer, sizeof(buffer));
+
+		fclose(fp);
+	}
+
+	else if(!strcmp(buffer, "2"))
+	{
+		send(sockfd, buffer, BUFSIZE, 0); //send selection 
+		bzero( buffer, sizeof(buffer));
+
+		printf("Please enter a folder name:\n");
+		gets(buffer);
+		send(sockfd, buffer, BUFSIZE, 0);
+		bzero(buffer, sizeof(buffer));
+
+		recv(sockfd, buffer, BUFSIZE, 0); // receive successful message
+		printf("%s folder is created successfully.\n", buffer);
+	}
+
+	else if(!strcmp(buffer, "3"))
+	{
+		send(sockfd, buffer, BUFSIZE, 0); //send selection 
+		bzero( buffer, sizeof(buffer));
+
+		printf("Do you want to delete your folder?(y or n)\n");
+		gets(buffer);
+		send(sockfd, buffer, BUFSIZE, 0);
+		bzero( buffer, sizeof(buffer));
+	}
+
+	else if(!strcmp(buffer, "4"))
+	{
+		send(sockfd, buffer, BUFSIZE, 0); //send selection 
+		bzero(buffer, sizeof(buffer));
+
+		recv(sockfd, buffer, BUFSIZE, 0); //receive file list
+		printf("Please enter one of the file or folder you wan to download:\n");
+		printf("%s\n", buffer);
+
+		gets(buffer);
+		fp = fopen(buffer, "w"); //create file
+		send(sockfd, buffer, BUFSIZE, 0); //send filename
+		bzero(buffer, sizeof(buffer));
+
+		int a = recv(sockfd, buffer, BUFSIZE, 0); //receive file data
+		fwrite(buffer, 1, a, fp); //write input to file
+		fclose(fp);
+
+		printf("The file is downloaded.\n");
+
+	}
+	
+	else if(!strcmp(buffer, "5"))
+	{
+		printf("Thank you. Have a nice day!\n");
+	}
+
+	close(sockfd);
+}
