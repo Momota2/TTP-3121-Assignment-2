@@ -1,1 +1,5 @@
 # TTP-3121-Assignment-2
+
+  This assignment is the development of File Repository System using Client-Server TCP/IP Model which is used for user file storager. User(Client) will connect to the file server using socket connection and the server should able to handle multiple client connection requests any particular time. Client can send file to the server and server will store the file in user specific directory.Client could also perform other tasks, e.g. create, copy, and delete directory. Client could also request for files to be downloaded from the server.
+  
+  We began this assignment by studying the concept of client and server from the knock knock protocol. Then implements it using C language. The requirements can be fulfil excepet for the IPC which we only managed to fulfil pipes. The tasks are carried out by working and studying together. Codings and debugging are done together by both of us. We didn't finish the bonus features as there is not enuogh time for us to handle it, because we have other assignments and fyp as well. The preparation for final exam need to be start as well
