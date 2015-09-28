@@ -1,0 +1,110 @@
+#include "inet.h"
+#include <fcntl.h>
+#define BUFSIZE 1024
+
+main()
+{
+	int sockfd, new_sockfd,clilen;
+	char buffer[BUFSIZE+1];
+	struct sockaddr_in serv_addr, cli_addr;
+	FILE *fp;
+	char directory[100] = "/home/lchau/Desktop/TCPIP/";
+	char *filename;
+
+	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+	{
+		perror("Server: socket() error\n");
+		exit(1);
+	}
+
+	printf("\nEcho Application Demo\n");
+
+	bzero((char*) &serv_addr, sizeof(serv_addr));
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = inet_addr("192.168.1.45");
+	serv_addr.sin_port = htons(SERV_TCP_PORT);
+
+	if(bind(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
+		perror("Server: bind() error\n");
+
+	printf("\nWaiting for connection... [bind]\n");
+
+	listen(sockfd,5);
+
+	for(;;)
+	{
+		clilen = sizeof(cli_addr);
+		new_sockfd = accept(sockfd, (struct sockaddr*) &cli_addr, &clilen);
+		
+		if(fork() == 0)
+		{
+			close(sockfd);
+
+			if(new_sockfd > 0)
+			{
+				printf("\nClient connected now.\n");
+
+				recv(new_sockfd, buffer, BUFSIZE, 0); //receive selection
+
+				if (!strcmp(buffer, "1"))
+				{
+					mkdir(directory, S_IRWXU, S_IRWXG, S_IRWXO); //create folder
+					recv(new_sockfd, buffer, BUFSIZE, 0); //receive filename
+					strcpy(filename, buffer);
+					strcat(directory, buffer);	
+					fp = fopen(directory, "w"); //create or open the file
+				
+					int a = recv(new_sockfd, buffer, BUFSIZE, 0); //receive file data
+					fwrite(buffer, 1, a, fp); //write input to file
+					fclose(fp);
+					printf("\n%s is received.\n", filename);
+				}
+
+				else if(!strcmp(buffer, "2"))
+				{
+					recv(new_sockfd, buffer, BUFSIZE, 0);
+					char createDirectory[100] = "/home/lchau/Desktop/";
+					strcat(createDirectory, buffer);
+					mkdir(createDirectory, S_IRWXU, S_IRWXG, S_IRWXO);
+
+					send(new_sockfd, buffer, BUFSIZE, 0); //send message when creating folder successfully
+					bzero(buffer, sizeof(buffer));
+				}
+
+				else if(!strcmp(buffer, "3"))
+				{
+					recv(new_sockfd, buffer, BUFSIZE, 0);
+					if (!strcmp(buffer, "y"))
+					{
+						execl("/bin/rm", "rm", "-rf", "/home/lchau/Desktop/TCPIP", (char*)0);
+					}	
+				}
+
+				else if(!strcmp(buffer, "4"))
+				{
+					fp = popen("ls Download", "r");
+					int a = fread(buffer, 1, BUFSIZE, fp);
+					send(new_sockfd, buffer, a, 0); //send file list to client
+					bzero(buffer, sizeof(buffer));
+					pclose(fp);
+
+					recv(new_sockfd, buffer, BUFSIZE, 0); //receive filename
+					char directory[100] = "/home/lchau/Desktop/Download/";
+					strcat(directory, buffer);
+					fp = fopen(directory, "r");//open file
+					int b = fread(buffer, 1, 256, fp);
+					printf("%s\n", buffer);
+					send(new_sockfd, buffer, b, 0);//send file data
+					bzero(buffer, sizeof(buffer));
+
+					fclose(fp);
+				}
+
+				exit(0);
+			}
+		}
+		close(new_sockfd);
+	}
+	close(sockfd);
+}
+
